@@ -1,0 +1,21 @@
+{
+  "name": "wsproxy",
+  "version": "0.1.1",
+  "description": "A simple Websocket and HTTP/HTTPS intercepting proxy",
+  "main": "wsproxy.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/staaldraad/wsproxy.git"
+  },
+  "author": "Etienne Stalmans",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/staaldraad/wsproxy/issues"
+  },
+  "dependencies": {
+    "websocket": "~1.0.21"
+  }
+}
