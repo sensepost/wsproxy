@@ -22,4 +22,5 @@ To create custom mangle rules, modify "mangle" in wsprocessor.js. Replace rules 
 ## Dependencies
 websocket - [https://github.com/theturtle32/WebSocket-Node](https://github.com/theturtle32/WebSocket-Node)
 
-
+## License
+WSProxy is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (http://creativecommons.org/licenses/by-nc-sa/4.0/) Permissions beyond the scope of this license may be available at http://sensepost.com/contact us/.
