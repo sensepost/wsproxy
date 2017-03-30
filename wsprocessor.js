@@ -3,13 +3,13 @@ var fs = require('fs');
 var express = require('express');
 var app = express()
 var bodyParser = require('body-parser');
-var multer = require('multer'); 
+var multer = require('multer');
 var WebSocketClient = require('websocket').client;
 var WebSocketServer =  require('websocket').server
 var wsServer = null
 var connection = null
 
-var webserver = false
+var webserver = true 
 var ignoreRules = []
 var replaceRules = []
 var expect = 1
@@ -22,15 +22,15 @@ app.use(express.static(__dirname + '/scripts'));
 app.set('view engine', 'jade');
 
 ignoreMessage = function(direction,data){
-    var ignore = false 
+    var ignore = false
     if(direction===0){
             if(ignoreRules["in"].length === 0)
                     return false
             for(var i = 0; i< ignoreRules["in"].length; i++){
                 if(data.match(ignoreRules["in"][i]) != null)
-                        return true 
+                        return true
             }
-           
+
     }
     else if(direction===1){
             if(ignoreRules["out"].length === 0)
@@ -39,7 +39,7 @@ ignoreMessage = function(direction,data){
                 if(data.match(ignoreRules["out"][i]) != null)
                         return true
             }
-            
+
     }
     return ignore
 
@@ -77,7 +77,7 @@ exports.saveReq = function(request){
     if(request.resourceURL.protocol == null)
     {
         proto = request.httpRequest.headers['origin'].split(':')[0] === 'http' ? 'ws://':'wss://'
-    }                
+    }
     savedReqs[request.resourceURL.path] = {proto:proto,headers:request.httpRequest.headers}
     if(webserver)
        sendToInterface({type:'channel',title:request.resourceURL.path,id:request.resourceURL.path})
@@ -124,7 +124,7 @@ exports.startServer = function(){
         httpsserver = https.createServer(options,app).listen(8082);
         wsServer = new WebSocketServer({
             httpServer: httpsserver,
-            autoAcceptConnections: false 
+            autoAcceptConnections: false
         });
         wsServer.on('request', function(request) {
             connection = request.accept('share-protocol', request.origin);
@@ -202,7 +202,7 @@ app.post('/repeat',function(req,res){
     })
     client.on('connect',function(clconn){
         clconn.sendUTF(data)
-        clconn.on('message', function(d) { 
+        clconn.on('message', function(d) {
                 //console.log(d)
                 if(tmpexpect-- === 0){
                    //clconn.close()
@@ -210,7 +210,7 @@ app.post('/repeat',function(req,res){
                           res.send(d.utf8Data)
                         else
                           res.end("Binary data - Can't display")
-                   
+
                 }
         });
     })
@@ -231,13 +231,13 @@ app.post('/berude',function(req,res){
     })
     client.on('connect',function(clconn){
         res.json({result:0,message:"Starting session"})
-        clconn.on('message', function(d) { 
+        clconn.on('message', function(d) {
                 //console.log("message",d)
                 if(d.type==='utf8')
                     sendToInterface({type:'rude',message:d.utf8Data,payload:""})
                 else
                     sendToInterface({type:'rude',message:"Binary Data",payload:""})
-                   
+
         });
         for(var i=0; i<payload.length; i++){
             var dd = data.replace(/«\b\w+\b«/i,payload[i])

@@ -9,9 +9,10 @@ var processor = require('./wsprocessor.js')
 var sslport = 8000  //port used for the https_mitm
 var httpport = 8001 //port used for http_mitm
 var proxyport = 8081 //the main proxy port
-var verbose = false 
-var webserver = true 
+var verbose = true 
+var webserver = true
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 processor.initRules()
 if(webserver)
         processor.startServer()
@@ -42,7 +43,7 @@ https_mitm = https.createServer(ssloptions, function (req, res) {
   }
   try{
     var proxy_request = https.request(options);
-    proxyRequestor(req,res,proxy_request) 
+    proxyRequestor(req,res,proxy_request)
   }catch(err){
   }
 }).listen(sslport);
@@ -57,7 +58,7 @@ http_mitm = http.createServer(function(req,res){
   }
   try{
   var proxy_request = http.request(options);
-  proxyRequestor(req,res,proxy_request) 
+  proxyRequestor(req,res,proxy_request)
   }catch(err){}
 }).listen(httpport)
 
@@ -66,8 +67,8 @@ http_mitm.on('connect', function(req, res, head) {
     // connect to an origin server
     var mitm_socket = net.connect(proxyport, function() {
        res.write('HTTP/1.1 200 Connection Established\r\n' + 'Proxy-agent: Node-Proxy\r\n' + '\r\n');
-    }); 
-    
+    });
+
     mitm_socket.on('data', function(d) { res.write(d)  });
     res.on('data', function(d) { try { mitm_socket.write(d) } catch(err) {}});
 
@@ -82,16 +83,16 @@ http_mitm.on('connect', function(req, res, head) {
 });
 
 https_mitm.on('upgrade',function(req,res,head){
-    //console.log(req.url)
+    console.log(req.url)
 })
 http_mitm.on('upgrade',function(req,res,head){
-    //console.log(req.url)
+    console.log(req.url)
 })
 
 //start websocket server for both http and https
 wsServer = new WebSocketServer({
     httpServer: [http_mitm,https_mitm],
-    autoAcceptConnections: false 
+    autoAcceptConnections: true 
 });
 
 wsServer.on('connect', function(co){
@@ -105,7 +106,7 @@ wsServer.on('request', function(request) {
     if(request.resourceURL.protocol == null)
     {
         proto = request.httpRequest.headers['origin'].split(':')[0] === 'http' ? 'ws://':'wss://'
-    }                
+    }
     var host = request.httpRequest.headers['host']
     client.connect(proto+host+request.resourceURL.path, null,request.httpRequest.headers['Origin'],request.httpRequest.headers);
     client.on('connectFailed',function(error){
@@ -113,20 +114,22 @@ wsServer.on('request', function(request) {
     })
 
     client.on('connect',function(clconn){
-        connection.on('message', function(d) { 
+        connection.on('message', function(d) {
                 processor.saveOutgoing(request.resourceURL.path,d);
-                (d.type==='utf8') ? clconn.sendUTF(d.utf8Data):clconn.sendBytes(d.binaryData)  
+                (d.type==='utf8') ? clconn.sendUTF(d.utf8Data):clconn.sendBytes(d.binaryData)
                 if(verbose ){
+                        console.log(d.type,d.binaryData,d.utf8Data)
                         if(d.type==='utf8' && !processor.ignore(1,d.utf8Data))
                             console.log("Outgoing: ",processor.mangle(d.utf8Data))
                         if(d.type!=='utf8' && !processor.ignore(1,d.binaryData))
                             console.log("Outgoing: ",d.binaryData)
                 }
         });
-        clconn.on('message', function(d) { 
+        clconn.on('message', function(d) {
                 processor.saveIncomming(request.resourceURL.path,d);
-                (d.type==='utf8') ? connection.sendUTF(d.utf8Data):connection.sendBytes(d.binaryData)  
+                (d.type==='utf8') ? connection.sendUTF(d.utf8Data):connection.sendBytes(d.binaryData)
                 if(verbose){
+                        console.log(d.type,d.binaryData,d.utf8Data)
                         if(d.type==='utf8' && !processor.ignore(0,d.utf8Data))
                             console.log("Incomming: ",d.utf8Data)
                         if(d.type!=='utf8' && !processor.ignore(0,d.binaryData))
