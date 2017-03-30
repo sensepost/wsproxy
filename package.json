@@ -20,5 +20,6 @@
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "multer": "^1.2.0"
+    "websocket": "~1.0.21"
   }
 }
