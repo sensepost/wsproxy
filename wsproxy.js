@@ -85,6 +85,9 @@ http_mitm.on('connect', function(req, res, head) {
 https_mitm.on('upgrade',function(req,res,head){
     console.log(req.url)
 })
+
+
+
 http_mitm.on('upgrade',function(req,res,head){
     console.log(req.url)
 })
@@ -98,18 +101,25 @@ wsServer = new WebSocketServer({
 wsServer.on('connect', function(co){
 })
 
+
 wsServer.on('request', function(request) {
     processor.saveReq(request)
     var connection = request.accept(null, request.origin);
     var client = new WebSocketClient();
+    var origin = request.httpRequest.headers['origin'] || null;
     var proto = (request.resourceURL.protocol === 'http:' || request.resourceURL.protocol === 'http') ? 'ws://':'wss://'
     if(request.resourceURL.protocol == null)
     {
-        proto = request.httpRequest.headers['origin'].split(':')[0] === 'http' ? 'ws://':'wss://'
+        if (origin == null) {
+            proto = request.httpRequest.connection.encrypted ? 'wss://':'ws://';
+        } else {
+            proto = origin.split(':')[0] === 'http' ? 'ws://':'wss://';
+        }
     }
-    var host = request.httpRequest.headers['host']
-    client.connect(proto+host+request.resourceURL.path, null,request.httpRequest.headers['Origin'],request.httpRequest.headers);
+    var host = request.httpRequest.headers['host'];
+    client.connect(proto+host+request.resourceURL.path, null,origin,request.httpRequest.headers);
     client.on('connectFailed',function(error){
+            console.log('Connect failed!!!!!!');
             console.log(error)
     })
 
