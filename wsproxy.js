@@ -98,9 +98,7 @@ wsServer = new WebSocketServer({
     autoAcceptConnections: true 
 });
 
-
-
-wsServer.on('connect', function(c0){
+wsServer.on('connect', function(co){
 });
 
 
