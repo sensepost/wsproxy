@@ -83,7 +83,7 @@ http_mitm.on('connect', function(req, res, head) {
 });
 
 https_mitm.on('upgrade',function(req,res,head){
-    console.log(req.url);
+    console.log(req.url)
 })
 
 
@@ -99,7 +99,7 @@ wsServer = new WebSocketServer({
 });
 
 wsServer.on('connect', function(co){
-});
+})
 
 
 wsServer.on('request', function(request) {
