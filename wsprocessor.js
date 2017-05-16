@@ -74,9 +74,14 @@ exports.saveReq = function(request){
     if(!savedReqs[request.resourceURL.path])
             savedReqs[request.resourceURL.path] = []
     var proto = (request.resourceURL.protocol === 'http:' || request.resourceURL.protocol === 'http') ? 'ws://':'wss://'
+    
     if(request.resourceURL.protocol == null)
     {
-        proto = request.httpRequest.headers['origin'].split(':')[0] === 'http' ? 'ws://':'wss://'
+        if (request.httpRequest.headers['origin'] == null) {
+            proto = request.httpRequest.connection.encrypted ? 'wss://':'ws://';
+        } else {
+            proto = request.httpRequest.headers['origin'].split(':')[0] === 'http' ? 'ws://':'wss://';
+        }
     }
     savedReqs[request.resourceURL.path] = {proto:proto,headers:request.httpRequest.headers}
     if(webserver)
@@ -194,9 +199,9 @@ app.post('/repeat',function(req,res){
     var path = req.body.channel
     var data = req.body.data
     var client = new WebSocketClient();
-
+    var origin = headers['origin'] || null;
     var tmpexpect = expect
-    client.connect(host+path, null,headers['origin'],headers);
+    client.connect(host+path, null,origin,headers);
     client.on('httpResponse',function(resp){
         res.end("Got a NON-Websocket response. Are you authenticated?")
     })
@@ -222,10 +227,11 @@ app.post('/berude',function(req,res){
     var path = req.body.channel
     var data = req.body.data
     var client = new WebSocketClient();
+    var origin = headers['origin'] || null;
     var b = new Buffer(req.body.payload, 'base64')
     var payload = b.toString().split('\n');
 
-    client.connect(host+path, null,headers['origin'],headers);
+    client.connect(host+path, null,origin,headers);
     client.on('httpResponse',function(resp){
         res.json({result:1,message:"Got a NON-Websocket response. Are you authenticated?"})
     })
