@@ -22,7 +22,7 @@ nodejs wsproxy.js
 ```
 
 To view the requests, a webserver is started up on https://127.0.0.1:8082 by default, changable in config.js. To disable this webserver, change config.webserver=true to config.webserver=false in config.js.
-To create custom mangle rules, modify "mangle" in wsprocessor.js. Replace rules also get applied here. Replace rules can be hardcoded in wsprocessor.js or altered at runtime through the web-interface.
+To create custom mangle rules, modify "mangle" in wsprocessor.js. Replace rules also get applied here. Replace rules can be modified in config.js or altered at runtime through the web-interface.
 
 ## Dependencies
 websocket - [https://github.com/theturtle32/WebSocket-Node](https://github.com/theturtle32/WebSocket-Node)
