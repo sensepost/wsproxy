@@ -191,9 +191,18 @@ sendSocketState = function() {
     }
 }
 
+// refill channels list
+fillChannels = function() {
+    Object.keys(savedReqs).forEach(function(key){
+        sendToInterface({type:'channel',title:key,id:key})
+    })
+}
+
+
 app.get('/', function (req, res) {
-     res.render('main',{reuseSocket:reuseSocket,expect:expect,ignore:{_in:ignoreRules["in"],_out:ignoreRules["out"]}});
-     sendSocketState();
+    res.render('main',{reuseSocket:reuseSocket,expect:expect,ignore:{_in:ignoreRules["in"],_out:ignoreRules["out"]}});
+    setTimeout(sendSocketState, 2000);
+    setTimeout(fillChannels, 2000);
 });
 
 app.get('/channels/:id', function(req,res){
