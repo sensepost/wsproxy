@@ -33,16 +33,19 @@ head
                                 a(class="collapsed",data-toggle="collapse",href="#collapseConf") Configuration #[span(class="glyphicon glyphicon-chevron-down")]
                             .panel-collapse.collapse(id="collapseConf")
                                 .panel-body
-                                    form
+                                    form   
                                         .form-group
                                             label Expected Echos
                                             input(id="expected_echo",class="form-control",value="#{expect}")
                                         .form-group
-                                            label Ignore Incomming
-                                            input(id="ignore_incomming",class="form-control",value="#{ignore._in}")
+                                            label Ignore Incoming
+                                            input(id="ignore_incoming",class="form-control",value="#{ignore._in}")
                                         .form-group
                                             label Ignore Outgoing
                                             input(id="ignore_outgoing",class="form-control",value="#{ignore._out}")
+                                        .form-group
+                                            label Reuse Socket for Replays
+                                            input(id="reuse_socket",class="form-control",value="#{reuseSocket}")
                                         button(class="btn btn-info", id="savebtn").
                                             Save Config
                     .panel.panel-default.col-md-4.col-sm-2.col-xs-6
@@ -54,7 +57,7 @@ head
                     .col-md-4.col-sm-6.col-xs-12
                         h2 Messages
                         .col-md-6.col-sm-3.col-xs-12
-                            h3 Incomming
+                            h3 Incoming
                             table(class="table table-hover",id="messages_in_list")
                         .col-md-6.col-sm-3.col-xs-12
                             h3 Outgoing

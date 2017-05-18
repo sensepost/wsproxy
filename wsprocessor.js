@@ -12,10 +12,13 @@ var connection = null
 var webserver = true 
 var ignoreRules = []
 var replaceRules = []
-var expect = 1
+var expect = null
+var reuseSocket = false
 var savedReqs = {}
 var savedOutgoing = {}
-var savedIncomming = {}
+var savedIncoming = {}
+var wsOutgoingConnection = null
+var wsIncomingConnection = null
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/scripts'));
@@ -45,9 +48,11 @@ ignoreMessage = function(direction,data){
 
 }
 
-exports.initRules = function(){
-    ignoreRules = {"in":[/^h{1}/,/^o{1}/],"out":[/ping/]}
-    replaceRules = [{"/ping/":"pong"}]
+exports.initRules = function(iRules, rRules, e, reuse){
+    ignoreRules = iRules;
+    replaceRules = rRules;
+    expect = e;
+    reuseSocket = reuse;
 }
 
 exports.ignore = function(direction,data){
@@ -69,6 +74,15 @@ exports.mangle = function(data){
 exports.securityCheck = function(data){
 
 }
+
+exports.setWsOutgoingConnection = function(conn){
+    wsOutgoingConnection = conn;
+}
+
+exports.setWsIncomingConnection = function(conn){
+    wsIncomingConnection = conn;
+}
+
 
 exports.saveReq = function(request){
     if(!savedReqs[request.resourceURL.path])
@@ -104,29 +118,29 @@ exports.saveOutgoing = function(channel,message){
        sendToInterface({type:'outgoing',title:msg,channel:channel,id:savedOutgoing[channel].length-1})
 }
 
-exports.saveIncomming = function(channel,message){
+exports.saveIncoming = function(channel,message){
     if(message.type==='utf8' && ignoreMessage(0,message.utf8Data)){
         return 1; //don't save request as it's in the ignore list
     }
-    if(!savedIncomming[channel])
-            savedIncomming[channel] = []
-    savedIncomming[channel].push(message)
+    if(!savedIncoming[channel])
+            savedIncoming[channel] = []
+    savedIncoming[channel].push(message)
 
-    var msg = "Incomming: "+savedIncomming[channel].length-1
+    var msg = "Incoming: "+savedIncoming[channel].length-1
     if(message.type==='utf8')
         msg = ""+message.utf8Data.substring(0,30)
 
     if(webserver)
-       sendToInterface({type:'incomming',title:msg,channel:channel,id:savedIncomming[channel].length-1})
+       sendToInterface({type:'incoming',title:msg,channel:channel,id:savedIncoming[channel].length-1})
 }
 
-exports.startServer = function(){
+exports.startServer = function(port){
         webserver = true
         var options = {
           key: fs.readFileSync('key.pem'),
           cert: fs.readFileSync('cert.pem')
         };
-        httpsserver = https.createServer(options,app).listen(8082);
+        httpsserver = https.createServer(options,app).listen(parseInt(port));
         wsServer = new WebSocketServer({
             httpServer: httpsserver,
             autoAcceptConnections: false
@@ -147,13 +161,39 @@ exports.startServer = function(){
         });
 }
 
+exports.socketClosed = function(){
+    if (reuseSocket) {sendToInterface({type:'socketclosed'})}
+}
+
+exports.socketOpen = function(){
+    if (reuseSocket) {sendToInterface({type:'socketopen'})}
+}
+
+
 sendToInterface = function(message){
      if(connection)
          connection.sendUTF(JSON.stringify(message))
 }
 
+// returns true if socket is open
+checkSocket = function(sock) {
+    return (sock.connected && sock.state == 'open');
+}
+
+// inform web interface of client<->proxy socket state
+sendSocketState = function() {
+    if (wsIncomingConnection && reuseSocket) {
+        if (checkSocket(wsIncomingConnection)) {
+            exports.socketOpen();
+        } else {
+            exports.socketClosed();
+        }
+    }
+}
+
 app.get('/', function (req, res) {
-     res.render('main',{expect:expect,ignore:{_in:ignoreRules["in"],_out:ignoreRules["out"]}})
+     res.render('main',{reuseSocket:reuseSocket,expect:expect,ignore:{_in:ignoreRules["in"],_out:ignoreRules["out"]}});
+     sendSocketState();
 });
 
 app.get('/channels/:id', function(req,res){
@@ -169,16 +209,18 @@ app.get('/outgoing/:channel/:id', function(req,res){
     res.json(resp)
 })
 
-app.get('/incomming/:channel/:id', function(req,res){
-    var resp = {request:savedReqs[req.params.channel],channel:req.params.channel,data:savedIncomming[req.params.channel][parseInt(req.params.id)]}
+app.get('/incoming/:channel/:id', function(req,res){
+    var resp = {request:savedReqs[req.params.channel],channel:req.params.channel,data:savedIncoming[req.params.channel][parseInt(req.params.id)]}
+    sendSocketState();
     res.json(resp)
 })
 
 app.post('/config',function(req,res){
     expect = parseInt(req.body.echo)
+    var reuseSocket = (req.body.reuseSocket == 'true');
     ignoreRules["in"] = []
     ignoreRules["out"] = []
-    var inc = req.body.incomming.split(',')
+    var inc = req.body.incoming.split(',')
     var outc = req.body.outgoing.split(',')
     for(var i=0;i<inc.length; i++){
             v = inc[i].replace(/\//g,'')
@@ -193,32 +235,52 @@ app.post('/config',function(req,res){
     res.send({success:0})
 })
 
+
 app.post('/repeat',function(req,res){
     var headers = JSON.parse(req.body.headers)
     var host = req.body.host
     var path = req.body.channel
     var data = req.body.data
+    var direction = req.body.direction
     var client = new WebSocketClient();
     var origin = headers['origin'] || null;
     var tmpexpect = expect
-    client.connect(host+path, null,origin,headers);
-    client.on('httpResponse',function(resp){
-        res.end("Got a NON-Websocket response. Are you authenticated?")
-    })
-    client.on('connect',function(clconn){
-        clconn.sendUTF(data)
-        clconn.on('message', function(d) {
-                //console.log(d)
-                if(tmpexpect-- === 0){
-                   //clconn.close()
-                        if(d.type==='utf8')
-                          res.send(d.utf8Data)
-                        else
-                          res.end("Binary data - Can't display")
+    if (direction === 'incoming'){
+        if (checkSocket(wsIncomingConnection) && reuseSocket) {
+            wsIncomingConnection.sendUTF(data);
+            res.end('Sent using existing connection. Response will be in Messages.');
+        } else {
+            // existing socket not open
+            res.end('Websocket not open, could not send.');
+        }
+    } 
+    if (direction === 'outgoing') {
+        // try and reuse existing connection if configured to
+        if (checkSocket(wsOutgoingConnection) && reuseSocket) {
+            wsOutgoingConnection.sendUTF(data);
+            res.end('Sent using existing connection. Response will be in Messages.');
+        } else {
+            client.connect(host+path, null,origin,headers);
+            client.on('httpResponse',function(resp){
+                res.end("Got a NON-Websocket response. Are you authenticated?")
+            })
+            client.on('connect',function(clconn){
+                clconn.sendUTF(data)
+                clconn.on('message', function(d) {
+                        //console.log(d)
+                        if(tmpexpect-- === 0){
+                        //clconn.close()
+                                if(d.type==='utf8')
+                                res.send(d.utf8Data)
+                                else
+                                res.end("Binary data - Can't display")
 
-                }
-        });
-    })
+                        }
+                });
+            })
+        }
+    }
+
 })
 
 app.post('/berude',function(req,res){
@@ -226,31 +288,58 @@ app.post('/berude',function(req,res){
     var host = req.body.host
     var path = req.body.channel
     var data = req.body.data
+    var direction = req.body.direction
     var client = new WebSocketClient();
     var origin = headers['origin'] || null;
     var b = new Buffer(req.body.payload, 'base64')
     var payload = b.toString().split('\n');
 
-    client.connect(host+path, null,origin,headers);
-    client.on('httpResponse',function(resp){
-        res.json({result:1,message:"Got a NON-Websocket response. Are you authenticated?"})
-    })
-    client.on('connect',function(clconn){
-        res.json({result:0,message:"Starting session"})
-        clconn.on('message', function(d) {
-                //console.log("message",d)
-                if(d.type==='utf8')
-                    sendToInterface({type:'rude',message:d.utf8Data,payload:""})
-                else
-                    sendToInterface({type:'rude',message:"Binary Data",payload:""})
 
-        });
-        for(var i=0; i<payload.length; i++){
-            var dd = data.replace(/«\b\w+\b«/i,payload[i])
-            //console.log(dd)
-            clconn.sendUTF(dd)
+    if (direction === 'incoming'){
+        if (wsIncomingConnection.connected && wsIncomingConnection.state == 'open') {
+            res.json({result:0,message:"Starting session using existing socket"})
+            for(var i=0; i<payload.length; i++){
+                var dd = data.replace(/«\b\w+\b«/i,payload[i])
+                //console.log(dd)
+                wsIncomingConnection.sendUTF(dd)
+            }
+        } else {
+            // existing socket not open
+            res.json({result:1,message:"Websocket not open, could not send."})
         }
+    } 
+    if (direction === 'outgoing') {
+        // try and reuse existing connection
+        if (wsOutgoingConnection.connected && wsOutgoingConnection.state == 'open') {
+            res.json({result:0,message:"Starting session using existing socket"})
+            for(var i=0; i<payload.length; i++){
+                var dd = data.replace(/«\b\w+\b«/i,payload[i])
+                //console.log(dd)
+                wsOutgoingConnection.sendUTF(dd)
+            }
+        } else {
+            res.json({result:0,message:"Starting session using new socket"})
+            client.connect(host+path, null,origin,headers);
+            client.on('httpResponse',function(resp){
+                res.json({result:1,message:"Got a NON-Websocket response. Are you authenticated?"})
+            })
+            client.on('connect',function(clconn){
+                
+                clconn.on('message', function(d) {
+                        //console.log("message",d)
+                        if(d.type==='utf8')
+                            sendToInterface({type:'rude',message:d.utf8Data,payload:""})
+                        else
+                            sendToInterface({type:'rude',message:"Binary Data",payload:""})
 
+                });
+                for(var i=0; i<payload.length; i++){
+                    var dd = data.replace(/«\b\w+\b«/i,payload[i])
+                    //console.log(dd)
+                    clconn.sendUTF(dd)
+                }
+            })
+        }
+    }
 
-    })
 })

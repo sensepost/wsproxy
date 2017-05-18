@@ -1,26 +1,50 @@
-function incommingMsgClick(evt){
-    //evt.preventDefault();
+var direction='outgoing';
+
+function checkReuseSetting(){
+    var reuse_option = document.getElementById("reuse_socket");
+    return (reuse_option.value == 'true');
+}
+
+function enableButtons(){
+    document.getElementById("repeatbtn").disabled = false;
+    $("#repeatbtn").show()  
+    $("#rudebtn").show() 
+    $("#mark").show() 
+    $("#payloadfile").show()
+}
+
+function disableButtons(){
     document.getElementById("repeatbtn").disabled = true;
+    $("#repeatbtn").hide() 
+    $("#rudebtn").hide()
+    $("#mark").hide() 
+    $("#payloadfile").hide()
+}
+
+function incomingMsgClick(evt){
+    //evt.preventDefault();
+
     var url = $(evt).data('id')
     fetchDetails(url)
-    $("#repeatbtn").hide() 
-    $("#rudebtn").hide() 
-    $("#mark").hide() 
-    $("#payloadfile").hide() 
+
+    if (checkReuseSetting()) {
+        enableButtons()
+    } else {
+        disableButtons()
+    }
+
     $('#detail_response_div').hide();
     $('#rude_response_div').hide();
     $('#messages_out_list tr').removeClass('success');
     $('#messages_in_list tr').removeClass('success');
     var r = "#in_"+$(evt).data('row')
     $(r).toggleClass('success')
+    direction = 'incoming'
 }
 function outgoingMsgClick(evt){
     //evt.preventDefault();
-    document.getElementById("repeatbtn").disabled = false;
-    $("#repeatbtn").show()  
-    $("#rudebtn").show() 
-    $("#mark").show() 
-    $("#payloadfile").show() 
+    enableButtons()
+
     var url =  $(evt).data('id')
     fetchDetails(url)
     $('#detail_response_div').hide();
@@ -29,11 +53,12 @@ function outgoingMsgClick(evt){
     $('#messages_in_list tr').removeClass('success');
     var r = "#out_"+$(evt).data('row')
     $(r).toggleClass('success')
+    direction = 'outgoing'
 }
 
 $("#savebtn").on('click',function(e){
         e.preventDefault()
-        var data = {echo:$('#expected_echo').val(),incomming:$('#ignore_incomming').val(),outgoing:$('#ignore_outgoing').val()}
+        var data = {echo:$('#expected_echo').val(),reuseSocket:$('#reuse_socket').val(),incoming:$('#ignore_incoming').val(),outgoing:$('#ignore_outgoing').val()}
         
         $.ajax({
              type:"POST",
@@ -41,6 +66,10 @@ $("#savebtn").on('click',function(e){
              data: data
         }).done(function(response){
         })
+
+        if (checkReuseSetting() && direction == 'incoming') {
+            enableButtons()
+        }
 
 })
 
@@ -73,7 +102,7 @@ $("#repeatbtn").on('click',function(event){
     var data = $('#detail_message').val()
     var host = $('#detail_host').val()
     var channel = $('#detail_channel').val()
-    var body = {headers:headers,data:data,host:host,channel:channel}
+    var body = {headers:headers,data:data,host:host,channel:channel,direction:direction}
     $('#detail_response').val("")
     $.ajax({
             type: "POST",
@@ -81,7 +110,8 @@ $("#repeatbtn").on('click',function(event){
             data: body
     }).done(function(response){
         $('#detail_response').val(response)
-        $('#detail_response_div').show();
+        $('#detail_response_div').show()
+        
     }) 
 
 })
@@ -110,7 +140,7 @@ $("#rudebtn").on('click',function(event){
     var f = files[0]
         var reader = new FileReader();
         reader.onload = function(e){
-            var body = {headers:headers,data:data,host:host,channel:channel,payload:window.btoa(e.target.result)}
+            var body = {headers:headers,data:data,host:host,channel:channel,payload:window.btoa(e.target.result),direction:direction}
             $("#rude_response tbody tr").remove(); 
             $.ajax({
                     type: "POST",

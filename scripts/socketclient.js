@@ -1,8 +1,7 @@
     // Initialize everything when the window finishes loading
     window.addEventListener("load", function(event) {
       var socket;
-
-      var url = "wss://127.0.0.1:8082";
+      var url = 'wss://' + window.location.hostname + ':' + window.location.port;
 
       // Create a new connection when the Connect button is clicked
         socket = new WebSocket(url, "share-protocol");
@@ -20,6 +19,30 @@
                var channel_item = "<li><a href='/channels/"+encodeURIComponent(evt.id)+"' target='blank' data-id='"+evt.id+"'>"+evt.title+"</a></li>"
                $('#channels_list').append(channel_item)
             }
+            if(evt.type === 'socketclosed'){
+              var repeatbtn = document.getElementById("repeatbtn");
+              var rudebtn = document.getElementById("rudebtn");
+              var mark = document.getElementById("mark");
+              var payloadfile = document.getElementById("payloadfile");
+              if (direction === 'incoming') {
+                repeatbtn.disabled = true;
+                rudebtn.disabled = true;
+                mark.disabled = true;
+                payloadfile.disabled = true;
+              }
+            }
+            if(evt.type === 'socketopen'){
+              var repeatbtn = document.getElementById("repeatbtn");
+              var rudebtn = document.getElementById("rudebtn");
+              var mark = document.getElementById("mark");
+              var payloadfile = document.getElementById("payloadfile");
+              if (direction === 'incoming') {
+                repeatbtn.disabled = false;
+                rudebtn.disabled = false;
+                mark.disabled = false;
+                payloadfile.disabled = false;
+              }
+            }
             if(evt.type === 'rude'){
                var table = document.getElementById("rude_response").getElementsByTagName('tbody')[0];
                var row = table.insertRow(-1);
@@ -31,11 +54,11 @@
                cell3.innerHTML = evt.message.length;
                //$('#rude_response').val($('#rude_response').val()+"\n\n"+evt.message)
             }
-            if(evt.type === 'incomming'){
-               //var message_item = "<li><a class='incommingmsg' href='#' data-id='/incomming/"+encodeURIComponent(evt.channel)+"/"+evt.id+"' onclick='incommingMsgClick(this)'>"+evt.title+"</a></li>"
+            if(evt.type === 'incoming'){
+               //var message_item = "<li><a class='incomingmsg' href='#' data-id='/incoming/"+encodeURIComponent(evt.channel)+"/"+evt.id+"' onclick='incomingMsgClick(this)'>"+evt.title+"</a></li>"
                //$('#messages_in_list').append(message_item)
-               //var message_item = "<a class='incommingmsg' href='#' data-id='/incomming/"+encodeURIComponent(evt.channel)+"/"+evt.id+"' onclick='incommingMsgClick(this)'>"+evt.title+"</a>"
-               var message_item = "<td data-id='/incomming/"+encodeURIComponent(evt.channel)+"/"+evt.id+"' data-row='"+evt.id+"' onclick='incommingMsgClick(this)'>"+evt.title+"</td>"
+               //var message_item = "<a class='incomingmsg' href='#' data-id='/incoming/"+encodeURIComponent(evt.channel)+"/"+evt.id+"' onclick='incomingMsgClick(this)'>"+evt.title+"</a>"
+               var message_item = "<td data-id='/incoming/"+encodeURIComponent(evt.channel)+"/"+evt.id+"' data-row='"+evt.id+"' onclick='incomingMsgClick(this)'>"+evt.title+"</td>"
                var table = document.getElementById("messages_in_list");
                var row = table.insertRow(0);
                row.setAttribute('id' , "in_"+evt.id);
