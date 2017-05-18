@@ -296,7 +296,7 @@ app.post('/berude',function(req,res){
 
 
     if (direction === 'incoming'){
-        if (wsIncomingConnection.connected && wsIncomingConnection.state == 'open') {
+        if (checkSocket(wsIncomingConnection) && reuseSocket) {
             res.json({result:0,message:"Starting session using existing socket"})
             for(var i=0; i<payload.length; i++){
                 var dd = data.replace(/«\b\w+\b«/i,payload[i])
@@ -310,7 +310,7 @@ app.post('/berude',function(req,res){
     } 
     if (direction === 'outgoing') {
         // try and reuse existing connection
-        if (wsOutgoingConnection.connected && wsOutgoingConnection.state == 'open') {
+        if (checkSocket(wsOutgoingConnection) && reuseSocket) {
             res.json({result:0,message:"Starting session using existing socket"})
             for(var i=0; i<payload.length; i++){
                 var dd = data.replace(/«\b\w+\b«/i,payload[i])
