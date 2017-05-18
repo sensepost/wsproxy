@@ -22,7 +22,7 @@ var wsIncomingConnection = null
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/scripts'));
-app.set('view engine', 'jade');
+app.set('view engine', 'pug');
 
 ignoreMessage = function(direction,data){
     var ignore = false

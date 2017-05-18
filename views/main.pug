@@ -1,0 +1,103 @@
+head
+    title WebSocket Proxy
+    meta( charset='utf-8' )
+    meta( http-equiv='X-UA-Compatible', content='IE=edge' )
+    meta( name='viewport', content='width=device-width, initial-scale=1.0' )
+    meta( name='description', content='Baking Bootstrap Snippets with Jade' )
+    link(href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css", rel="stylesheet")
+    style.
+        tr {
+            width: 100%;
+            display: inline-table;
+        }
+        td a {
+            display:block;
+            width:100%;
+        }
+        table{
+            height:500px; 
+        }
+        tbody{
+            overflow-y: scroll;
+            height: 450px;
+            width: 100%;
+            position: absolute;
+        }
+ 
+    body(style="padding-bottom:10rem;")
+        .container-fluid
+            h1 WebSocket Proxy
+            .row
+                .panel.panel-default.col-md-4.col-sm-4.col-xs-12
+                    .panel-heading
+                        a(class="collapsed",data-toggle="collapse",href="#collapseConf") Configuration #[span(class="glyphicon glyphicon-chevron-down")]
+                    .panel-collapse.collapse(id="collapseConf")
+                        .panel-body
+                            form   
+                                .form-group
+                                    label Expected Echos
+                                    input(id="expected_echo",class="form-control",value=expect)
+                                .form-group
+                                    label Ignore Incoming
+                                    input(id="ignore_incoming",class="form-control",value=ignore._in.toString())
+                                .form-group
+                                    label Ignore Outgoing
+                                    input(id="ignore_outgoing",class="form-control",value=ignore._out.toString())
+                                .form-group
+                                    label Reuse Socket for Replays
+                                    input(id="reuse_socket",class="form-control",value=reuseSocket.toString())
+                                button(class="btn btn-info", id="savebtn").
+                                    Save Config
+                .panel.panel-default.col-md-4.col-sm-2.col-xs-6
+                    .panel-heading.
+                        Channels
+                    .panel-body
+                        ul(id="channels_list")
+            .row
+                .col-md-4.col-sm-6.col-xs-12
+                    h2 Messages
+                    .col-md-6.col-sm-3.col-xs-12
+                        h3 Incoming
+                        table(class="table table-hover",id="messages_in_list")
+                    .col-md-6.col-sm-3.col-xs-12
+                        h3 Outgoing
+                        table(class="table table-hover",id="messages_out_list")
+                .col-md-8.col-sm-6.col-xs-12
+                    h2 Detail
+                    form
+                        .form-group
+                            label Host 
+                            input(id="detail_host", class="form-control", readonly)
+                        .form-group
+                            label Channel 
+                            input(id="detail_channel", class="form-control")
+                        .form-group
+                            label Headers
+                            textarea(id="detail_headers", class="form-control" rows=8)
+                        .form-group
+                            label Data
+                            textarea(id="detail_message", class="form-control" rows=10)
+                        .form-group(id="detail_response_div" hidden)
+                            label Response 
+                            textarea(id="detail_response", class="form-control" rows=10)
+                        .form-group(id="rude_response_div" hidden)
+                            label Intruder Responses 
+                            table(class="table table-hover",id="rude_response")
+                                thead
+                                    tr
+                                        th Number
+                                        th Body
+                                        th Length 
+                                tbody
+                    button(class="btn btn-lg btn-primary", id="repeatbtn").
+                        Repeat
+                    button(class="btn btn-lg btn-warning", id="mark").
+                        Mark
+                    button(class="btn btn-lg btn-primary", id="rudebtn").
+                        Be Rude
+                    input(type="file", id="payloadfile")
+
+    script( src='//ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js' )
+    script( src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js' )
+    script(src="/socketclient.js" )
+    script(src="/actionclient.js" )
