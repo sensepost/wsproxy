@@ -10,6 +10,45 @@ var config = require('./config')
 var verbose = config.verbose
 
 
+getTimeStamp = function(){
+    var cd = new Date();
+    var d = cd.getDate();
+    var m = cd.getMonth()+1;
+    var y = cd.getFullYear();
+    var h = cd.getHours();
+    var mi = cd.getMinutes();
+    var s = cd.getSeconds();
+    var dt = y+((d < 10)?"0":"")+ d+((m < 10)?"0":"") + m;
+    var t = ((h < 10)?"0":"") + h + ((mi < 10)?"0":"") + mi + ((s < 10)?"0":"") + s;
+    return dt + t;
+}
+
+if (config.logStdOutToFile) {
+    var fs = require('fs');
+    var path = require('path');
+    if (!fs.existsSync(config.logStdOutFilePath)) 
+        fs.mkdirSync(config.logStdOutFilePath)
+    if (!fs.lstatSync(config.logStdOutFilePath).isDirectory()) {
+        console.log('Log file output path exists and is not a directory.');
+        process.exit(1);
+    }
+    var logFile = path.join(config.logStdOutFilePath,getTimeStamp()+'_wsproxy.txt');
+
+    doLog = function(log){
+        data = log.map(function(x){return (x)?x.toString():''}).join(' ');
+        console.log(data);
+        fs.appendFileSync(logFile,data + '\n');
+    }
+
+} else {
+    doLog = function(log){
+        data = log.map(function(x){return (x)?x.toString():''}).join(' ');
+        console.log(data);
+    }
+}
+
+
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 processor.initRules(config.web.ignoreRules, config.web.replaceRules, config.web.eEchos, config.web.reuseSocket)
 if(config.webserver)
@@ -81,13 +120,13 @@ http_mitm.on('connect', function(req, res, head) {
 });
 
 https_mitm.on('upgrade',function(req,res,head){
-    console.log('Https connection request for channel:',req.url)
+    doLog(['Https connection request for channel:',req.url])
 })
 
 
 
 http_mitm.on('upgrade',function(req,res,head){
-    console.log('Http connection request for channel:', req.url)
+    doLog(['Http connection request for channel:', req.url])
 })
 
 //start websocket server for both http and https
@@ -111,7 +150,7 @@ createClient = function(proto, host, request, origin, connection){
     connection.on('message', function(d){
         preRequests.push(d);
         processor.saveOutgoing(request.resourceURL.path,d);
-        if (verbose) {console.log('Received premature request from Client<->Proxy connection:',d.type,d.binaryData,d.utf8Data)}
+        if (verbose) {doLog(['Received premature request from Client<->Proxy connection:',d.type,d.binaryData,d.utf8Data])}
     })
 
 
@@ -120,19 +159,19 @@ createClient = function(proto, host, request, origin, connection){
 
 
     client.on('connectFailed',function(error){
-            console.log('Connect failed!!!!!!');
-            console.log(error)
+            doLog(['Connect failed!!!!!!']);
+            doLog([error])
     })
 
     client.on('httpResponse', function(response, webSocketClient){
         if (verbose) {
-            console.log('Received non 101 httpResponse');
-            console.log(response.headers,response.statusCode,response.statusMessage);
+            doLog(['Received non 101 httpResponse']);
+            doLog([response.headers,response.statusCode,response.statusMessage]);
         }
     })
 
     client.on('connect',function(clconn){
-        if (verbose) { console.log('Proxy<->Server websocket connected') }
+        if (verbose) { doLog(['Proxy<->Server websocket connected']) }
 
         // remove the temporary event listener
         connection.removeAllListeners();
@@ -142,9 +181,9 @@ createClient = function(proto, host, request, origin, connection){
             var d = preRequests[i];
             if (verbose) {
                 if(d.type==='utf8' && !processor.ignore(1,d.utf8Data))
-                    console.log('Relaying premature request on Proxy<->Server connection:',processor.mangle(d.utf8Data))
+                    doLog(['Relaying premature request on Proxy<->Server connection:',processor.mangle(d.utf8Data)])
                 if(d.type!=='utf8' && !processor.ignore(1,d.binaryData))
-                    console.log('Relaying premature request on Proxy<->Server connection:',d.binaryData)
+                    doLog(['Relaying premature request on Proxy<->Server connection:',d.binaryData])
             }
             (d.type==='utf8') ? clconn.sendUTF(d.utf8Data):clconn.sendBytes(d.binaryData);
         }
@@ -154,11 +193,11 @@ createClient = function(proto, host, request, origin, connection){
         connection.on('message', function(d) {
                 processor.saveOutgoing(request.resourceURL.path,d);
                 if (verbose) {
-                    console.log('Received message on Client<->Proxy connection:',d.type,d.binaryData,d.utf8Data)
+                    doLog(['Received message on Client<->Proxy connection:',d.type,d.binaryData,d.utf8Data])
                     if(d.type==='utf8' && !processor.ignore(1,d.utf8Data))
-                        console.log('Relaying on Proxy<->Server connection:',processor.mangle(d.utf8Data))
+                        doLog(['Relaying on Proxy<->Server connection:',processor.mangle(d.utf8Data)])
                     if(d.type!=='utf8' && !processor.ignore(1,d.binaryData))
-                        console.log('Relaying on Proxy<->Server connection:',d.binaryData)
+                        doLog(['Relaying on Proxy<->Server connection:',d.binaryData])
                 }
                 (d.type==='utf8') ? clconn.sendUTF(d.utf8Data):clconn.sendBytes(d.binaryData)
                 
@@ -166,19 +205,19 @@ createClient = function(proto, host, request, origin, connection){
         clconn.on('message', function(d) {
                 processor.saveIncoming(request.resourceURL.path,d);                
                 if (verbose) {
-                    console.log('Received message on Proxy<->Server connection:',d.type,d.binaryData,d.utf8Data)
+                    doLog(['Received message on Proxy<->Server connection:',d.type,d.binaryData,d.utf8Data])
                     if(d.type==='utf8' && !processor.ignore(0,d.utf8Data))
-                        console.log('Relaying on Client<->Proxy connection:',d.utf8Data)
+                        doLog(['Relaying on Client<->Proxy connection:',d.utf8Data])
                     if(d.type!=='utf8' && !processor.ignore(0,d.binaryData))
-                        console.log('Relaying on Client<->Proxy connection:',d.binaryData)
+                        doLog(['Relaying on Client<->Proxy connection:',d.binaryData])
                 }
                 (d.type==='utf8') ? connection.sendUTF(d.utf8Data):connection.sendBytes(d.binaryData)
         });
 
         clconn.on('error', function(error){
             if (verbose){
-                console.log('Received error on Proxy<->Server connection');
-                console.log(error);
+                doLog(['Received error on Proxy<->Server connection']);
+                doLog([error]);
             }
             
             // clean up
@@ -188,7 +227,7 @@ createClient = function(proto, host, request, origin, connection){
             clconn.close();
 
             if (connection.connected) {
-                if (verbose){console.log('Client<->Proxy connection still active, attempting reconnect of Proxy<->Server socket')}
+                if (verbose){doLog(['Client<->Proxy connection still active, attempting reconnect of Proxy<->Server socket'])}
                 createClient(proto, host, request, origin, connection);
             }
 
@@ -197,8 +236,8 @@ createClient = function(proto, host, request, origin, connection){
 
         connection.on('error', function(error){
             if (verbose) {
-                console.log('Received error on Client<->Proxy connection');
-                console.log(error);
+                doLog(['Received error on Client<->Proxy connection']);
+                doLog([error]);
             }
 
             // unsure of the best approach here, are there recoverable errors?
@@ -209,8 +248,8 @@ createClient = function(proto, host, request, origin, connection){
 
         clconn.on('close', function(reasonCode, description){
             if (verbose) {
-                console.log('Received close event on Proxy<->Server connection');
-                console.log(description,reasonCode);
+                doLog(['Received close event on Proxy<->Server connection']);
+                doLog([description,reasonCode]);
             }
 
             // clean up
@@ -219,7 +258,7 @@ createClient = function(proto, host, request, origin, connection){
             client.removeAllListeners();
             
             if (connection.connected) {
-                if (verbose){console.log('Client<->Proxy connection still active, attempting reconnect of Proxy<->Server socket')}
+                if (verbose){doLog(['Client<->Proxy connection still active, attempting reconnect of Proxy<->Server socket'])}
                 createClient(proto, host, request, origin, connection);
             }
             
@@ -227,8 +266,8 @@ createClient = function(proto, host, request, origin, connection){
 
         connection.on('close', function(reasonCode, description){
             if (verbose) {
-                console.log('Received close event on Client<->Proxy connection');
-                console.log(description, reasonCode);
+                doLog(['Received close event on Client<->Proxy connection']);
+                doLog([description, reasonCode]);
             }
 
             processor.socketClosed();
@@ -245,8 +284,8 @@ createClient = function(proto, host, request, origin, connection){
             cancel();
             connection.ping(data);
             if (verbose) {
-                console.log('Received ping event on Proxy<->Server connection');
-                console.log(data);
+                doLog(['Received ping event on Proxy<->Server connection']);
+                doLog([data]);
             }
         });
 
@@ -254,24 +293,24 @@ createClient = function(proto, host, request, origin, connection){
             cancel();
             clconn.ping(data);
             if (verbose) {
-                console.log('Received ping event on Client<->Proxy connection');
-                console.log(data);
+                doLog(['Received ping event on Client<->Proxy connection']);
+                doLog([data]);
             }
         });
 
         clconn.on('pong', function(data){
             connection.pong(data);
             if (verbose) {
-                console.log('Received pong event on Proxy<->Server connection');
-                console.log(data);
+                doLog(['Received pong event on Proxy<->Server connection']);
+                doLog([data]);
             }
         });
 
         connection.on('pong', function(data){
             clconn.pong(data);
             if (verbose) {
-                console.log('Received pong event on Client<->Proxy connection');
-                console.log(data);
+                doLog(['Received pong event on Client<->Proxy connection']);
+                doLog([data]);
             }
         });
         */
@@ -285,7 +324,7 @@ createClient = function(proto, host, request, origin, connection){
 wsServer.on('request', function(request) {
     processor.saveReq(request)
 
-    if (verbose){console.log('Client->Proxy websocket connected')}
+    if (verbose){doLog(['Client->Proxy websocket connected'])}
     
     var origin = request.httpRequest.headers['origin'] || null;
     var proto = (request.resourceURL.protocol === 'http:' || request.resourceURL.protocol === 'http') ? 'ws://':'wss://'
@@ -325,4 +364,3 @@ proxyRequestor = function(req,res,proxy_request){
     proxy_request.end();
   });
 }
-

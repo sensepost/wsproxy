@@ -12,6 +12,8 @@ config.verbose = true;  // verbose stdout output
 config.webserver = true; // run the webserver for the user interface
 config.maxFrameSize = 205600; // maximum framesize on websocket server
 config.maxMessageSize = 411200; // maximum framesize on websocket server
+config.logStdOutToFile = true; // write stdout data to log file as well
+config.logStdOutFilePath = './logs/'; // log files go here, make sure to include path in .gitignore if under app root
 
 // config items configurable from the user interface
 // changes made in web interface are non persistent will not be written back here
@@ -24,3 +26,7 @@ config.web.reuseSocket = false; // attempt to reuse existing websocket for repla
 
 
 module.exports = config;
+
+
+
+
