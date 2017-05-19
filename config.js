@@ -10,7 +10,8 @@ config.webinterfaceport = process.env.WSPROXY_WEBINTERFACEPORT || 8082; // the w
 
 config.verbose = true;  // verbose stdout output
 config.webserver = true; // run the webserver for the user interface
-
+config.maxFrameSize = 205600; // maximum framesize on websocket server
+config.maxMessageSize = 411200; // maximum framesize on websocket server
 
 // config items configurable from the user interface
 // changes made in web interface are non persistent will not be written back here

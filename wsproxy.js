@@ -93,6 +93,8 @@ http_mitm.on('upgrade',function(req,res,head){
 //start websocket server for both http and https
 wsServer = new WebSocketServer({
     httpServer: [http_mitm,https_mitm],
+    maxReceivedFrameSize: config.maxFrameSize,
+    maxReceivedMessageSize: config.maxMessageSize,
     autoAcceptConnections: false // request event does not get triggered unless this is set false
 });
 
