@@ -226,7 +226,7 @@ app.get('/incoming/:channel/:id', function(req,res){
 
 app.post('/config',function(req,res){
     expect = parseInt(req.body.echo)
-    var reuseSocket = (req.body.reuseSocket == 'true');
+    reuseSocket = (req.body.reuseSocket == 'true');
     ignoreRules["in"] = []
     ignoreRules["out"] = []
     var inc = req.body.incoming.split(',')
