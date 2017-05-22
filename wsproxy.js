@@ -178,7 +178,7 @@ createClient = function(proto, host, request, origin, connection){
             (d.type==='utf8') ? clconn.sendUTF(d.utf8Data):clconn.sendBytes(d.binaryData);
         }
 
-        processor.setWsOutgoingConnection(clconn);
+        processor.setWsOutgoingConnection(request.resourceURL.path,clconn);
         
         connection.on('message', function(d) {
                 processor.saveOutgoing(request.resourceURL.path,d);
@@ -259,8 +259,8 @@ createClient = function(proto, host, request, origin, connection){
                 doLog(['Received close event on Client<->Proxy connection']);
                 doLog([description, reasonCode]);
             }
-
-            processor.socketClosed();
+            
+            processor.socketClosed(request.resourceURL.path);
 
             // clean up
             connection.removeAllListeners();
@@ -329,8 +329,9 @@ wsServer.on('request', function(request) {
     var host = request.httpRequest.headers['host'];
 
     var connection = request.accept(null, request.origin); 
-    processor.setWsIncomingConnection(connection);
-    processor.socketOpen();
+    processor.setWsIncomingConnection(request.resourceURL.path,connection);
+    console.log('Open',request.resourceURL.path);
+    processor.socketOpen(request.resourceURL.path);
     createClient(proto, host, request, origin, connection);
     
 });

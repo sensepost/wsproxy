@@ -5,6 +5,11 @@ function checkReuseSetting(){
     return (reuse_option.value == 'true');
 }
 
+function checkSocketOpen(){
+    var channel = document.getElementById("detail_channel").value.toString();
+    return (socketChannels[channel] == 'open');
+}
+
 function enableButtons(){
     document.getElementById("repeatbtn").disabled = false;
     $("#repeatbtn").show()  
@@ -27,7 +32,7 @@ function incomingMsgClick(evt){
     var url = $(evt).data('id')
     fetchDetails(url)
 
-    if (checkReuseSetting()) {
+    if (checkReuseSetting() && checkSocketOpen()) {
         enableButtons()
     } else {
         disableButtons()

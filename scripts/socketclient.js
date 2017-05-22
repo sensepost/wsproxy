@@ -1,3 +1,5 @@
+    var socketChannels = {};
+    
     // Initialize everything when the window finishes loading
     window.addEventListener("load", function(event) {
       var socket;
@@ -24,7 +26,9 @@
               var rudebtn = document.getElementById("rudebtn");
               var mark = document.getElementById("mark");
               var payloadfile = document.getElementById("payloadfile");
-              if (direction === 'incoming') {
+              var channel = document.getElementById("detail_channel").value.toString();
+              socketChannels[evt.channel] = 'closed';
+              if (direction === 'incoming' && channel == evt.channel) {
                 repeatbtn.disabled = true;
                 rudebtn.disabled = true;
                 mark.disabled = true;
@@ -36,7 +40,9 @@
               var rudebtn = document.getElementById("rudebtn");
               var mark = document.getElementById("mark");
               var payloadfile = document.getElementById("payloadfile");
-              if (direction === 'incoming') {
+              var channel = document.getElementById("detail_channel").value.toString();
+              socketChannels[evt.channel] = 'open';
+              if (direction === 'incoming' && channel == evt.channel) {
                 repeatbtn.disabled = false;
                 rudebtn.disabled = false;
                 mark.disabled = false;
