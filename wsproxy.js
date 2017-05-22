@@ -18,8 +18,8 @@ getTimeStamp = function(){
     var h = cd.getHours();
     var mi = cd.getMinutes();
     var s = cd.getSeconds();
-    var dt = y+((d < 10)?"0":"")+ d+((m < 10)?"0":"") + m;
-    var t = ((h < 10)?"0":"") + h + ((mi < 10)?"0":"") + mi + ((s < 10)?"0":"") + s;
+    var dt = y+((m<10)?"0":"")+m+((d<10)?"0":"")+d;
+    var t = ((h<10)?"0":"")+h+((mi<10)?"0":"")+mi+((s<10)?"0":"")+s;
     return dt + t;
 }
 
