@@ -10,18 +10,8 @@ var config = require('./config')
 var verbose = config.verbose
 
 
-getTimeStamp = function(){
-    var cd = new Date();
-    var d = cd.getDate();
-    var m = cd.getMonth()+1;
-    var y = cd.getFullYear();
-    var h = cd.getHours();
-    var mi = cd.getMinutes();
-    var s = cd.getSeconds();
-    var dt = y+((m<10)?"0":"")+m+((d<10)?"0":"")+d;
-    var t = ((h<10)?"0":"")+h+((mi<10)?"0":"")+mi+((s<10)?"0":"")+s;
-    return dt + t;
-}
+var getTimeStamp = processor.getTimeStamp;
+
 
 if (config.logStdOutToFile) {
     var fs = require('fs');
@@ -36,21 +26,21 @@ if (config.logStdOutToFile) {
 
     doLog = function(log){
         data = log.map(function(x){return (x)?x.toString():''}).join(' ');
-        console.log(data);
-        fs.appendFileSync(logFile,data + '\n');
+        console.log(getTimeStamp(),data);
+        fs.appendFileSync(logFile, getTimeStamp() + ' ' + data + '\n');
     }
 
 } else {
     doLog = function(log){
         data = log.map(function(x){return (x)?x.toString():''}).join(' ');
-        console.log(data);
+        console.log(getTimeStamp(), data);
     }
 }
 
 
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-processor.initRules(config.web.ignoreRules, config.web.replaceRules, config.web.eEchos, config.web.reuseSocket)
+processor.initRules(config, doLog)
 if(config.webserver)
         processor.startServer(config.webinterfaceport)
 

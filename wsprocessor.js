@@ -8,6 +8,7 @@ var WebSocketClient = require('websocket').client;
 var WebSocketServer =  require('websocket').server
 var wsServer = null
 var connection = null
+var verbose = false;
 
 var webserver = true 
 var ignoreRules = []
@@ -19,6 +20,7 @@ var savedOutgoing = {}
 var savedIncoming = {}
 var wsOutgoingConnection = null
 var wsIncomingConnection = null
+var doLog = null
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/scripts'));
@@ -48,11 +50,28 @@ ignoreMessage = function(direction,data){
 
 }
 
-exports.initRules = function(iRules, rRules, e, reuse){
-    ignoreRules = iRules;
-    replaceRules = rRules;
-    expect = e;
-    reuseSocket = reuse;
+
+exports.getTimeStamp = function(){
+    var cd = new Date();
+    var d = cd.getDate();
+    var m = cd.getMonth()+1;
+    var y = cd.getFullYear();
+    var h = cd.getHours();
+    var mi = cd.getMinutes();
+    var s = cd.getSeconds();
+    var dt = y+((m<10)?"0":"")+m+((d<10)?"0":"")+d;
+    var t = ((h<10)?"0":"")+h+((mi<10)?"0":"")+mi+((s<10)?"0":"")+s;
+    return dt + t;
+}
+
+
+exports.initRules = function(config, logFunc){
+    ignoreRules = config.web.ignoreRules;
+    replaceRules = config.web.replaceRules;
+    expect = config.web.eEchos;
+    reuseSocket = config.web.reuseSocket;
+    doLog = logFunc;
+    verbose = config.verbose;
 }
 
 exports.ignore = function(direction,data){
@@ -257,7 +276,9 @@ app.post('/repeat',function(req,res){
     if (direction === 'incoming'){
         if (checkSocket(wsIncomingConnection) && reuseSocket) {
             wsIncomingConnection.sendUTF(data);
-            res.end('Sent using existing connection. Response will be in Messages.');
+            res.end(exports.getTimeStamp() + ' Sent using existing connection. Response will be in Messages.');
+            if (verbose) 
+                doLog(['Resent data on existing incoming connection:',data]);
         } else {
             // existing socket not open
             res.end('Websocket not open, could not send.');
@@ -267,7 +288,9 @@ app.post('/repeat',function(req,res){
         // try and reuse existing connection if configured to
         if (checkSocket(wsOutgoingConnection) && reuseSocket) {
             wsOutgoingConnection.sendUTF(data);
-            res.end('Sent using existing connection. Response will be in Messages.');
+            res.end(exports.getTimeStamp() + ' Sent using existing connection. Response will be in Messages.');
+            if (verbose) 
+                doLog(['Resent data on existing outgoing connection:',data]);
         } else {
             client.connect(host+path, null,origin,headers);
             client.on('httpResponse',function(resp){
@@ -275,6 +298,8 @@ app.post('/repeat',function(req,res){
             })
             client.on('connect',function(clconn){
                 clconn.sendUTF(data)
+                if (verbose) 
+                    doLog(['Resent data on new outgoing connection:',data]);
                 clconn.on('message', function(d) {
                         //console.log(d)
                         if(tmpexpect-- === 0){
@@ -311,6 +336,8 @@ app.post('/berude',function(req,res){
                 var dd = data.replace(/«\b\w+\b«/i,payload[i])
                 //console.log(dd)
                 wsIncomingConnection.sendUTF(dd)
+                if (verbose) 
+                    doLog(['Sent "rude" data on existing incoming connection:',data]);
             }
         } else {
             // existing socket not open
@@ -325,6 +352,8 @@ app.post('/berude',function(req,res){
                 var dd = data.replace(/«\b\w+\b«/i,payload[i])
                 //console.log(dd)
                 wsOutgoingConnection.sendUTF(dd)
+                if (verbose) 
+                    doLog(['Sent "rude" data on existing outgoing connection:',data]);
             }
         } else {
             res.json({result:0,message:"Starting session using new socket"})
@@ -346,6 +375,8 @@ app.post('/berude',function(req,res){
                     var dd = data.replace(/«\b\w+\b«/i,payload[i])
                     //console.log(dd)
                     clconn.sendUTF(dd)
+                    if (verbose) 
+                        doLog(['Sent "rude" data on new outgoing connection:',data]);
                 }
             })
         }
