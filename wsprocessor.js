@@ -278,7 +278,7 @@ app.post('/repeat',function(req,res){
             wsIncomingConnections[path].sendUTF(data);
             res.end(exports.getTimeStamp() + ' Sent using existing connection. Response will be in Messages.');
             if (verbose) 
-                doLog(['Resent data on existing incoming connection:',data]);
+                doLog(['Resent data on existing incoming connection:',path,'Data:',data]);
         } else {
             // existing socket not open
             res.end('Websocket not open, could not send.');
@@ -290,7 +290,7 @@ app.post('/repeat',function(req,res){
             wsOutgoingConnections[path].sendUTF(data);
             res.end(exports.getTimeStamp() + ' Sent using existing connection. Response will be in Messages.');
             if (verbose) 
-                doLog(['Resent data on existing outgoing connection:',data]);
+                doLog(['Resent data on existing outgoing connection:',path,'Data:',data]);
         } else {
             client.connect(host+path, null,origin,headers);
             client.on('httpResponse',function(resp){
@@ -337,7 +337,7 @@ app.post('/berude',function(req,res){
                 //console.log(dd)
                 wsIncomingConnections[path].sendUTF(dd)
                 if (verbose) 
-                    doLog(['Sent "rude" data on existing incoming connection:',data]);
+                    doLog(['Sent "rude" data on existing incoming connection:',path,'Data:',data]);
             }
         } else {
             // existing socket not open
@@ -353,7 +353,7 @@ app.post('/berude',function(req,res){
                 //console.log(dd)
                 wsOutgoingConnections[path].sendUTF(dd)
                 if (verbose) 
-                    doLog(['Sent "rude" data on existing outgoing connection:',data]);
+                    doLog(['Sent "rude" data on existing outgoing connection:',path,'Data:',data]);
             }
         } else {
             res.json({result:0,message:"Starting session using new socket"})

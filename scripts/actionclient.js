@@ -12,6 +12,9 @@ function checkSocketOpen(){
 
 function enableButtons(){
     document.getElementById("repeatbtn").disabled = false;
+    document.getElementById("rudebtn").disabled = false;
+    document.getElementById("mark").disabled = false;
+    document.getElementById("payloadfile").disabled = false;
     $("#repeatbtn").show()  
     $("#rudebtn").show() 
     $("#mark").show() 
@@ -20,6 +23,9 @@ function enableButtons(){
 
 function disableButtons(){
     document.getElementById("repeatbtn").disabled = true;
+    document.getElementById("rudebtn").disabled = true;
+    document.getElementById("mark").disabled = true;
+    document.getElementById("payloadfile").disabled = true;
     $("#repeatbtn").hide() 
     $("#rudebtn").hide()
     $("#mark").hide() 
