@@ -8,6 +8,7 @@ var WebSocketClient = require('websocket').client;
 var WebSocketServer =  require('websocket').server
 var wsServer = null
 var connection = null
+var verbose = false;
 
 var webserver = true 
 var ignoreRules = []
@@ -17,8 +18,9 @@ var reuseSocket = false
 var savedReqs = {}
 var savedOutgoing = {}
 var savedIncoming = {}
-var wsOutgoingConnection = null
-var wsIncomingConnection = null
+var wsOutgoingConnections = {}
+var wsIncomingConnections = {}
+var doLog = null
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/scripts'));
@@ -48,11 +50,28 @@ ignoreMessage = function(direction,data){
 
 }
 
-exports.initRules = function(iRules, rRules, e, reuse){
-    ignoreRules = iRules;
-    replaceRules = rRules;
-    expect = e;
-    reuseSocket = reuse;
+
+exports.getTimeStamp = function(){
+    var cd = new Date();
+    var d = cd.getDate();
+    var m = cd.getMonth()+1;
+    var y = cd.getFullYear();
+    var h = cd.getHours();
+    var mi = cd.getMinutes();
+    var s = cd.getSeconds();
+    var dt = y+((m<10)?"0":"")+m+((d<10)?"0":"")+d;
+    var t = ((h<10)?"0":"")+h+((mi<10)?"0":"")+mi+((s<10)?"0":"")+s;
+    return dt + t;
+}
+
+
+exports.initRules = function(config, logFunc){
+    ignoreRules = config.web.ignoreRules;
+    replaceRules = config.web.replaceRules;
+    expect = config.web.eEchos;
+    reuseSocket = config.web.reuseSocket;
+    doLog = logFunc;
+    verbose = config.verbose;
 }
 
 exports.ignore = function(direction,data){
@@ -75,12 +94,12 @@ exports.securityCheck = function(data){
 
 }
 
-exports.setWsOutgoingConnection = function(conn){
-    wsOutgoingConnection = conn;
+exports.setWsOutgoingConnection = function(channel, conn){
+    wsOutgoingConnections[channel] = conn;
 }
 
-exports.setWsIncomingConnection = function(conn){
-    wsIncomingConnection = conn;
+exports.setWsIncomingConnection = function(channel, conn){
+    wsIncomingConnections[channel] = conn;
 }
 
 
@@ -161,12 +180,12 @@ exports.startServer = function(port){
         });
 }
 
-exports.socketClosed = function(){
-    if (reuseSocket) {sendToInterface({type:'socketclosed'})}
+exports.socketClosed = function(channel){
+    sendToInterface({type:'socketclosed',channel:channel})
 }
 
-exports.socketOpen = function(){
-    if (reuseSocket) {sendToInterface({type:'socketopen'})}
+exports.socketOpen = function(channel){
+    sendToInterface({type:'socketopen',channel:channel})
 }
 
 
@@ -181,12 +200,12 @@ checkSocket = function(sock) {
 }
 
 // inform web interface of client<->proxy socket state
-sendSocketState = function() {
-    if (wsIncomingConnection && reuseSocket) {
-        if (checkSocket(wsIncomingConnection)) {
-            exports.socketOpen();
+sendSocketState = function(channel) {
+    if (wsIncomingConnections[channel] && reuseSocket) {
+        if (checkSocket(wsIncomingConnections[channel])) {
+            exports.socketOpen(channel);
         } else {
-            exports.socketClosed();
+            exports.socketClosed(channel);
         }
     }
 }
@@ -201,7 +220,7 @@ fillChannels = function() {
 
 app.get('/', function (req, res) {
     res.render('main',{reuseSocket:reuseSocket,expect:expect,ignore:{_in:ignoreRules["in"],_out:ignoreRules["out"]}});
-    setTimeout(sendSocketState, 2000);
+    //setTimeout(sendSocketState, 2000);
     setTimeout(fillChannels, 2000);
 });
 
@@ -220,13 +239,13 @@ app.get('/outgoing/:channel/:id', function(req,res){
 
 app.get('/incoming/:channel/:id', function(req,res){
     var resp = {request:savedReqs[req.params.channel],channel:req.params.channel,data:savedIncoming[req.params.channel][parseInt(req.params.id)]}
-    sendSocketState();
+    sendSocketState(wsIncomingConnections[req.params.channel], req.params.channel);
     res.json(resp)
 })
 
 app.post('/config',function(req,res){
     expect = parseInt(req.body.echo)
-    var reuseSocket = (req.body.reuseSocket == 'true');
+    reuseSocket = (req.body.reuseSocket == 'true');
     ignoreRules["in"] = []
     ignoreRules["out"] = []
     var inc = req.body.incoming.split(',')
@@ -255,9 +274,11 @@ app.post('/repeat',function(req,res){
     var origin = headers['origin'] || null;
     var tmpexpect = expect
     if (direction === 'incoming'){
-        if (checkSocket(wsIncomingConnection) && reuseSocket) {
-            wsIncomingConnection.sendUTF(data);
-            res.end('Sent using existing connection. Response will be in Messages.');
+        if (checkSocket(wsIncomingConnections[path]) && reuseSocket) {
+            wsIncomingConnections[path].sendUTF(data);
+            res.end(exports.getTimeStamp() + ' Sent using existing connection. Response will be in Messages.');
+            if (verbose) 
+                doLog(['Resent data on existing incoming connection:',path,'Data:',data]);
         } else {
             // existing socket not open
             res.end('Websocket not open, could not send.');
@@ -265,9 +286,11 @@ app.post('/repeat',function(req,res){
     } 
     if (direction === 'outgoing') {
         // try and reuse existing connection if configured to
-        if (checkSocket(wsOutgoingConnection) && reuseSocket) {
-            wsOutgoingConnection.sendUTF(data);
-            res.end('Sent using existing connection. Response will be in Messages.');
+        if (checkSocket(wsOutgoingConnections[path]) && reuseSocket) {
+            wsOutgoingConnections[path].sendUTF(data);
+            res.end(exports.getTimeStamp() + ' Sent using existing connection. Response will be in Messages.');
+            if (verbose) 
+                doLog(['Resent data on existing outgoing connection:',path,'Data:',data]);
         } else {
             client.connect(host+path, null,origin,headers);
             client.on('httpResponse',function(resp){
@@ -275,6 +298,8 @@ app.post('/repeat',function(req,res){
             })
             client.on('connect',function(clconn){
                 clconn.sendUTF(data)
+                if (verbose) 
+                    doLog(['Resent data on new outgoing connection:',data]);
                 clconn.on('message', function(d) {
                         //console.log(d)
                         if(tmpexpect-- === 0){
@@ -305,12 +330,14 @@ app.post('/berude',function(req,res){
 
 
     if (direction === 'incoming'){
-        if (checkSocket(wsIncomingConnection) && reuseSocket) {
+        if (checkSocket(wsIncomingConnections[path]) && reuseSocket) {
             res.json({result:0,message:"Starting session using existing socket"})
             for(var i=0; i<payload.length; i++){
                 var dd = data.replace(/«\b\w+\b«/i,payload[i])
                 //console.log(dd)
-                wsIncomingConnection.sendUTF(dd)
+                wsIncomingConnections[path].sendUTF(dd)
+                if (verbose) 
+                    doLog(['Sent "rude" data on existing incoming connection:',path,'Data:',data]);
             }
         } else {
             // existing socket not open
@@ -319,12 +346,14 @@ app.post('/berude',function(req,res){
     } 
     if (direction === 'outgoing') {
         // try and reuse existing connection
-        if (checkSocket(wsOutgoingConnection) && reuseSocket) {
+        if (checkSocket(wsOutgoingConnections[path]) && reuseSocket) {
             res.json({result:0,message:"Starting session using existing socket"})
             for(var i=0; i<payload.length; i++){
                 var dd = data.replace(/«\b\w+\b«/i,payload[i])
                 //console.log(dd)
-                wsOutgoingConnection.sendUTF(dd)
+                wsOutgoingConnections[path].sendUTF(dd)
+                if (verbose) 
+                    doLog(['Sent "rude" data on existing outgoing connection:',path,'Data:',data]);
             }
         } else {
             res.json({result:0,message:"Starting session using new socket"})
@@ -346,6 +375,8 @@ app.post('/berude',function(req,res){
                     var dd = data.replace(/«\b\w+\b«/i,payload[i])
                     //console.log(dd)
                     clconn.sendUTF(dd)
+                    if (verbose) 
+                        doLog(['Sent "rude" data on new outgoing connection:',data]);
                 }
             })
         }

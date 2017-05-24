@@ -5,8 +5,16 @@ function checkReuseSetting(){
     return (reuse_option.value == 'true');
 }
 
+function checkSocketOpen(){
+    var channel = document.getElementById("detail_channel").value.toString();
+    return (socketChannels[channel] == 'open');
+}
+
 function enableButtons(){
     document.getElementById("repeatbtn").disabled = false;
+    document.getElementById("rudebtn").disabled = false;
+    document.getElementById("mark").disabled = false;
+    document.getElementById("payloadfile").disabled = false;
     $("#repeatbtn").show()  
     $("#rudebtn").show() 
     $("#mark").show() 
@@ -15,6 +23,9 @@ function enableButtons(){
 
 function disableButtons(){
     document.getElementById("repeatbtn").disabled = true;
+    document.getElementById("rudebtn").disabled = true;
+    document.getElementById("mark").disabled = true;
+    document.getElementById("payloadfile").disabled = true;
     $("#repeatbtn").hide() 
     $("#rudebtn").hide()
     $("#mark").hide() 
@@ -27,7 +38,7 @@ function incomingMsgClick(evt){
     var url = $(evt).data('id')
     fetchDetails(url)
 
-    if (checkReuseSetting()) {
+    if (checkReuseSetting() && checkSocketOpen()) {
         enableButtons()
     } else {
         disableButtons()
