@@ -330,7 +330,7 @@ wsServer.on('request', function(request) {
 
     var connection = request.accept(null, request.origin); 
     processor.setWsIncomingConnection(request.resourceURL.path,connection);
-    console.log('Open',request.resourceURL.path);
+    doLog(['Open',request.resourceURL.path]);
     processor.socketOpen(request.resourceURL.path);
     createClient(proto, host, request, origin, connection);
     
