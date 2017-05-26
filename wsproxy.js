@@ -62,7 +62,8 @@ function tcpConnection(conn) {
 
 https_mitm = https.createServer(ssloptions, function (req, res) {
   var port = (req.headers['host'].indexOf(':') > -1) ? req.headers['host'].split(':')[1] : 443;
-  var options= { hostname:req.headers['host'],
+  var hostname = (req.headers['host'].indexOf(':') > -1) ? req.headers['host'].split(':')[0] : req.headers['host'];
+  var options= { hostname:hostname,
                  port: port,
                  path: req.url,
                  method: req.method,
@@ -77,7 +78,8 @@ https_mitm = https.createServer(ssloptions, function (req, res) {
 
 http_mitm = http.createServer(function(req,res){
   var port = (req.headers['host'].indexOf(':') > -1) ? req.headers['host'].split(':')[1] : 80;
-  var options= { hostname:req.headers['host'],
+  var hostname = (req.headers['host'].indexOf(':') > -1) ? req.headers['host'].split(':')[0] : req.headers['host'];
+  var options= { hostname:hostname,
                  port: port,
                  path: req.url,
                  method: req.method,
