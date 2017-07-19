@@ -10,8 +10,8 @@ config.webinterfaceport = process.env.WSPROXY_WEBINTERFACEPORT || 8082; // the w
 
 config.verbose = true;  // verbose stdout output
 config.webserver = true; // run the webserver for the user interface
-config.maxFrameSize = 205600; // maximum frame size on websocket server
-config.maxMessageSize = 411200; // maximum message size on websocket server
+config.maxFrameSize = 212000; // maximum frame size on websocket server
+config.maxMessageSize = 424000; // maximum message size on websocket server
 config.logStdOutToFile = false; // write stdout data to log file as well
 config.logStdOutFilePath = './logs/'; // log files go here, make sure to include path in .gitignore if under app root
 
