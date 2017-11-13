@@ -12,7 +12,6 @@ var verbose = config.verbose
 
 var getTimeStamp = processor.getTimeStamp;
 
-
 if (config.logStdOutToFile) {
     var fs = require('fs');
     var path = require('path');
@@ -73,6 +72,7 @@ https_mitm = https.createServer(ssloptions, function (req, res) {
     var proxy_request = https.request(options);
     proxyRequestor(req,res,proxy_request)
   }catch(err){
+      console.trace()
   }
 }).listen(config.sslport);
 
@@ -88,7 +88,9 @@ http_mitm = http.createServer(function(req,res){
   try{
   var proxy_request = http.request(options);
   proxyRequestor(req,res,proxy_request)
-  }catch(err){}
+  }catch(err){
+      console.trace()
+  }
 }).listen(config.httpport)
 
 //Handle CONNECT request for HTTPS sessions
@@ -335,13 +337,19 @@ wsServer.on('request', function(request) {
     doLog(['Open',request.resourceURL.path]);
     processor.socketOpen(request.resourceURL.path);
     createClient(proto, host, request, origin, connection);
-    
+ 
 });
 
 
 
 proxyRequestor = function(req,res,proxy_request){
-  proxy_request.addListener('response', function (proxy_response) {
+    proxy_request.on('error', function(err) {
+        // Handle error
+        proxy_request.end();
+        res.end()
+    });
+
+    proxy_request.addListener('response', function (proxy_response) {
             proxy_response.addListener('data', function(chunk) {
               res.write(chunk, 'binary');
             });
